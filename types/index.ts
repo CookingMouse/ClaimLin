@@ -99,6 +99,12 @@ export interface ChatMessage {
   citation?: string;
 }
 
+export interface LogEntry {
+  agent: string;
+  msg: string;
+  status: "success" | "pending" | "error";
+}
+
 export interface ApiResponse<T> {
   data?: T;
   error?: string;
