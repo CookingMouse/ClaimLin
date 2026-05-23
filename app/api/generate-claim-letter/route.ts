@@ -1,7 +1,9 @@
 import { callAI } from "@/lib/ai-client";
+import { DEMO_CLAIM } from "@/lib/mock-data";
 import { getMockPolicyAnalysis } from "@/lib/mock-analysis";
 import type {
   ApiResponse,
+  DisasterType,
   GeneratedLetter,
   PolicyAnalysis,
   PropertyType,
@@ -12,6 +14,7 @@ export const runtime = "nodejs";
 
 type GenerateClaimLetterRequest = {
   propertyType: PropertyType;
+  disasterType: DisasterType;
   valuation: ValuationResult;
   policyAnalysis: PolicyAnalysis;
 };
@@ -26,6 +29,15 @@ function isPropertyType(value: unknown): value is PropertyType {
     value === "High-Rise Unit" ||
     value === "Shoplot" ||
     value === "Industrial Factory"
+  );
+}
+
+function isDisasterType(value: unknown): value is DisasterType {
+  return (
+    value === "fire" ||
+    value === "flood" ||
+    value === "storm" ||
+    value === "break-in"
   );
 }
 
@@ -66,6 +78,13 @@ function parseRequestBody(
   }
 
   if (
+    value.disasterType !== undefined &&
+    !isDisasterType(value.disasterType)
+  ) {
+    return null;
+  }
+
+  if (
     value.policyAnalysis !== undefined &&
     !isPolicyAnalysis(value.policyAnalysis)
   ) {
@@ -74,6 +93,7 @@ function parseRequestBody(
 
   return {
     propertyType: value.propertyType,
+    disasterType: value.disasterType ?? DEMO_CLAIM.disasterType,
     valuation: value.valuation,
     policyAnalysis: value.policyAnalysis ?? getMockPolicyAnalysis(),
   };
@@ -98,24 +118,68 @@ function formatRm(value: number): string {
 function buildMockClaimLetter(
   input: GenerateClaimLetterRequest,
 ): GeneratedLetter {
-  const { policyAnalysis, propertyType, valuation } = input;
-  const coveredClauses = policyAnalysis.coverageItems
-    .map((item) => item.clause)
-    .join(", ");
+  const { disasterType, policyAnalysis, propertyType, valuation } = input;
+  const generatedAt = new Date().toISOString();
+  const letterDate = new Date(generatedAt).toLocaleDateString("en-MY", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+  const coverageRows = policyAnalysis.coverageItems
+    .map((item) => {
+      return `| ${item.label} | ${item.status} | ${item.clause} | ${item.detail} |`;
+    })
+    .join("\n");
+  const warrantyStatus =
+    policyAnalysis.warrantyRisks.length > 0 ? "Flagged" : "Cleared";
+  const warrantyRows =
+    policyAnalysis.warrantyRisks.length > 0
+      ? policyAnalysis.warrantyRisks
+          .map((risk) => {
+            return `- ${risk.title} (${risk.severity}) - ${risk.clause}: ${risk.description}`;
+          })
+          .join("\n")
+      : "- No warranty risks identified from the policy analysis.";
 
   return {
     type: "claim",
     title: `Formal Claim Letter - ${policyAnalysis.claimId}`,
-    generatedAt: new Date().toISOString(),
-    body: `To the Claims Manager,
+    generatedAt,
+    body: `${letterDate}
 
-Re: Insurance claim ${policyAnalysis.claimId}
+Reference: ${policyAnalysis.claimId}
 
-I am submitting this formal claim for the loss affecting my ${propertyType}. Based on the policy analysis, the relevant coverage clauses are ${coveredClauses}. The applicable deductible is ${formatRm(policyAnalysis.deductible)}.
+To: Claims Director
 
-The assessed loss value is ${formatRm(valuation.lossValue)}. The sum insured is ${formatRm(valuation.sumInsured)} against an estimated rebuild cost of ${formatRm(valuation.actualRebuildCost)}, resulting in an estimated claim payout of ${formatRm(valuation.acvPayout)} after the average clause calculation.
+Subject: Formal claim submission for ${disasterType} loss at ${propertyType}
 
-Please assess the attached documents and confirm the approved settlement amount in writing.`,
+Dear Claims Director,
+
+I am submitting this formal claim for the ${disasterType} loss affecting my ${propertyType}. Based on the enclosed claim documents and policy review, the claim falls within the stated policy coverage and should be assessed without delay.
+
+Valuation summary:
+- Sum insured: ${formatRm(valuation.sumInsured)}
+- Actual rebuild cost: ${formatRm(valuation.actualRebuildCost)}
+- Assessed loss value: ${formatRm(valuation.lossValue)}
+- Average Clause payout: ${formatRm(valuation.acvPayout)}
+- Underinsurance shortfall: ${formatRm(valuation.underinsuranceShortfall)}
+- Deductible / excess: ${formatRm(policyAnalysis.deductible)}
+
+Coverage summary:
+
+| Coverage item | Status | Clause | Detail |
+| --- | --- | --- | --- |
+${coverageRows}
+
+Warranty review status: ${warrantyStatus}
+${warrantyRows}
+
+The Average Clause calculation has already been applied to the valuation. On that basis, I demand settlement using the calculated payout of ${formatRm(valuation.acvPayout)}, with any proposed deduction, reserve, or shortfall clearly reconciled against the sum insured of ${formatRm(valuation.sumInsured)} and the underinsurance shortfall of ${formatRm(valuation.underinsuranceShortfall)}.
+
+Please confirm the approved settlement amount in writing and identify any policy clause relied upon for deductions beyond the deductible stated above.
+
+Yours faithfully,
+Claimant`,
   };
 }
 
@@ -140,7 +204,7 @@ export async function POST(request: Request): Promise<Response> {
   try {
     const letterBody = await callAI(
       "You are a Malaysian insurance claims advocate. Generate a professional claim letter only, with no markdown. Cite relevant policy clauses and include the valuation figures.",
-      `Property type:\n${input.propertyType}\n\nValuation:\n${JSON.stringify(input.valuation, null, 2)}\n\nPolicy analysis:\n${JSON.stringify(input.policyAnalysis, null, 2)}`,
+      `Property type:\n${input.propertyType}\n\nDisaster type:\n${input.disasterType}\n\nValuation:\n${JSON.stringify(input.valuation, null, 2)}\n\nPolicy analysis:\n${JSON.stringify(input.policyAnalysis, null, 2)}`,
     );
     const letter: GeneratedLetter = {
       type: "claim",
