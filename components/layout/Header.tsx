@@ -16,12 +16,12 @@ const Header: React.FC<HeaderProps> = ({
   setEasyMode,
 }) => {
   return (
-    <header className="bg-white border-b border-purple-100 sticky top-0 z-50 px-4 py-4 shadow-sm">
-      <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+    <header className="bg-white border-b border-purple-100 sticky top-0 z-50 px-4 py-3 shadow-sm">
+      <div className="w-full flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="bg-purple-600 text-white p-3 rounded-2xl shadow-lg shadow-purple-600/10 flex items-center justify-center">
+          <div className="bg-purple-600 text-white p-2.5 rounded-2xl shadow-lg shadow-purple-600/10 flex items-center justify-center shrink-0">
             <svg
-              className="w-6 h-6"
+              className="w-5 h-5"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -34,18 +34,16 @@ const Header: React.FC<HeaderProps> = ({
               />
             </svg>
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-2xl font-black text-slate-900 tracking-tight">
-                ClaimLin
-              </span>
-              <Badge variant="primary">Independent Advocate</Badge>
-            </div>
-            <p className="text-sm text-slate-500 font-medium">
+          <div className="flex items-center gap-3">
+            <span className="text-xl font-black text-slate-900 tracking-tight">
+              ClaimLin
+            </span>
+            <Badge variant="primary">Independent Advocate</Badge>
+            <span className="hidden sm:block text-xs text-slate-400 font-medium border-l border-slate-200 pl-3">
               {lang === "EN"
-                ? "Empathetic Fire & Flood Claims Companion for Malaysia"
-                : "Pembantu Tuntutan Kebakaran & Banjir Malaysia"}
-            </p>
+                ? "AI-Powered Property Damage Claims Advocate for Malaysia"
+                : "Peguam Tuntutan Kerosakan Harta AI untuk Malaysia"}
+            </span>
           </div>
         </div>
 

@@ -1,6 +1,6 @@
 export type PropertyType = "Landed Home" | "High-Rise Unit" | "Shoplot" | "Industrial Factory";
 
-export type DisasterType = "fire" | "flood";
+export type DisasterType = "fire" | "flood" | "storm" | "break-in";
 
 export type ClaimStatus = "Draft" | "Submitted" | "Disputed" | "Resolved";
 
