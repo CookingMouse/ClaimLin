@@ -1,20 +1,20 @@
 import React from "react";
 
 interface PayoutBarChartProps {
-  offer: number;
-  deserve: number;
+  insurerOffer: number;
+  fairEntitlement: number;
   lang: "EN" | "BM";
 }
 
 const PayoutBarChart: React.FC<PayoutBarChartProps> = ({
-  offer,
-  deserve,
+  insurerOffer,
+  fairEntitlement,
   lang,
 }) => {
-  const max = Math.max(offer, deserve);
-  const offerWidth = (offer / max) * 100;
-  const deserveWidth = (deserve / max) * 100;
-  const gap = deserve - offer;
+  const max = Math.max(insurerOffer, fairEntitlement);
+  const offerWidth = (insurerOffer / max) * 100;
+  const deserveWidth = (fairEntitlement / max) * 100;
+  const gap = fairEntitlement - insurerOffer;
 
   return (
     <div className="flex flex-col gap-4 p-4 bg-white rounded-2xl border border-purple-100 shadow-sm">
@@ -24,7 +24,7 @@ const PayoutBarChart: React.FC<PayoutBarChartProps> = ({
             {lang === "EN" ? "What they offer" : "Tawaran mereka"}
           </span>
           <span className="text-sm font-black text-slate-600">
-            RM {offer.toLocaleString()}
+            RM {insurerOffer.toLocaleString()}
           </span>
         </div>
         <div className="h-4 w-full bg-slate-50 rounded-full overflow-hidden border border-slate-100 shadow-inner">
@@ -41,7 +41,7 @@ const PayoutBarChart: React.FC<PayoutBarChartProps> = ({
             {lang === "EN" ? "What you deserve" : "Hak anda"}
           </span>
           <span className="text-sm font-black text-purple-700">
-            RM {deserve.toLocaleString()}
+            RM {fairEntitlement.toLocaleString()}
           </span>
         </div>
         <div className="h-4 w-full bg-purple-50 rounded-full overflow-hidden border border-purple-100 shadow-inner">
