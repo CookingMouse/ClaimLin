@@ -1,20 +1,23 @@
-import { ValuationResult } from "../types";
+import type { ValuationResult } from "../types/index";
 
 export function calculateValuation(
   sumInsured: number,
-  actualRebuildCost: number,
-  lossValue: number
+  rebuildCost: number,
+  lossValue: number,
 ): ValuationResult {
-  const isUnderInsured = sumInsured < actualRebuildCost;
-  const coverageRatio = sumInsured / actualRebuildCost;
-  const acvPayout = isUnderInsured
-    ? Math.round(lossValue * coverageRatio)
+  const coverageRatio = rebuildCost > 0 ? sumInsured / rebuildCost : 0;
+  const isUnderInsured = rebuildCost > 0 && sumInsured < rebuildCost;
+  const calculatedPayout = isUnderInsured
+    ? coverageRatio * lossValue
     : lossValue;
-  const underinsuranceShortfall = lossValue - acvPayout;
+  const acvPayout = Math.min(calculatedPayout, lossValue);
+  const underinsuranceShortfall = isUnderInsured
+    ? lossValue - acvPayout
+    : 0;
 
   return {
     sumInsured,
-    actualRebuildCost,
+    actualRebuildCost: rebuildCost,
     lossValue,
     coverageRatio,
     isUnderInsured,
