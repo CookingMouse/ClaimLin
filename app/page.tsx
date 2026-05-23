@@ -102,7 +102,7 @@ export default function ClaimLinApp() {
   };
 
   const handleLoadDemo = () => {
-    setUploadedFiles(DEMO_CLAIM);
+    setUploadedFiles(DEMO_CLAIM.documents);
     runAIPipeline();
   };
 
@@ -146,14 +146,14 @@ export default function ClaimLinApp() {
     if (!chatInput.trim()) return;
 
     const query = chatInput.toLowerCase();
-    const matchedResponse = MOCK_CHAT_RESPONSES.find((r) =>
-      r.keywords.some((kw) => query.includes(kw))
+    const matchedKey = Object.keys(MOCK_CHAT_RESPONSES).find((key) =>
+      query.includes(key)
     );
 
-    const responseText = matchedResponse
-      ? matchedResponse.answer
+    const responseText = matchedKey
+      ? MOCK_CHAT_RESPONSES[matchedKey]
       : "I've searched your policy. Standard terms apply. Please let me know if you would like me to draft a confirmation request.";
-    const responseCite = matchedResponse ? matchedResponse.citation : "";
+    const responseCite = matchedKey ? `Policy section: ${matchedKey}` : "";
 
     setChatMessages((prev) => [
       ...prev,
@@ -174,7 +174,7 @@ export default function ClaimLinApp() {
   );
 
   const policyAnalysis = useMemo(() => getMockPolicyAnalysis(), []);
-  const hiddenDamages = useMemo(() => getMockHiddenDamages(), []);
+  const hiddenDamages = useMemo(() => getMockHiddenDamages("fire"), []);
 
   const disputeLetter = `DEMAND & CONTESTATION OF SETTLEMENT OFFER
 Policy Number: AL-998812-FH | Premise Address: Shah Alam, Selangor
