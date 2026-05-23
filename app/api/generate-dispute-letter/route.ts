@@ -85,6 +85,12 @@ function buildMockDisputeLetter(
   const coveredClauses = input.policyAnalysis.coverageItems
     .map((item) => `${item.label}: ${item.clause}`)
     .join("; ");
+  const flaggedWarranties =
+    input.policyAnalysis.warrantyRisks.length > 0
+      ? input.policyAnalysis.warrantyRisks
+          .map((risk) => `${risk.title} (${risk.clause})`)
+          .join("; ")
+      : "No warranty breach has been identified in the policy analysis.";
 
   return {
     type: "dispute",
@@ -96,9 +102,17 @@ Re: Dispute of settlement offer for claim ${input.policyAnalysis.claimId}
 
 I refer to your settlement position${input.fileName ? ` in ${input.fileName}` : ""} and respectfully dispute the proposed offer.
 
-The policy analysis identifies the following covered items and clauses: ${coveredClauses}. The stated deductible is RM${input.policyAnalysis.deductible.toLocaleString("en-MY")}. Please explain how the offer reconciles with these coverage findings and identify any exclusion or condition relied upon.
+The policy analysis identifies the following covered items and clauses: ${coveredClauses}. The stated deductible is RM${input.policyAnalysis.deductible.toLocaleString("en-MY")}. The warranty review records the following status: ${flaggedWarranties}.
 
-Until the insurer provides a clause-by-clause explanation and revised calculation, I reserve all rights to challenge the offer through the appropriate complaint channels.`,
+My dispute is based on the following three grounds:
+
+1. The insurer's offer is below the Average Clause calculation. The settlement position does not reconcile the offer against the insured value, rebuild cost, loss value, and deductible in a transparent clause-by-clause calculation.
+
+2. The depreciation applied exceeds Malaysian market rates. The offer appears to apply broad depreciation without item-level justification, replacement evidence, or reference to local reinstatement pricing.
+
+3. The RCV rider entitles the claimant to replacement cost, not ACV. Where replacement cost cover applies, the settlement must reflect reinstatement or replacement cost subject to the policy wording, not a reduced actual cash value figure.
+
+I therefore demand a revised settlement within 14 days from the date of this letter. If the insurer maintains its position, please provide the full adjuster worksheet, clause references, depreciation basis, and Average Clause calculation relied upon.`,
   };
 }
 
