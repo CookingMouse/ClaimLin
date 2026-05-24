@@ -52,9 +52,6 @@ export default function ClaimLinApp() {
   >({});
   const [analyzing, setAnalyzing] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [isClient, setIsClient] = useState(false);
-
-  useEffect(() => { setIsClient(true); }, []);
 
   // Policy Analysis State
   const [policyAnalysis, setPolicyAnalysis] = useState<PolicyAnalysis | null>(
@@ -62,9 +59,9 @@ export default function ClaimLinApp() {
   );
 
   // Valuation States
-  const [sumInsured, setSumInsured] = useState(350000);
-  const [actualRebuildCost, setActualRebuildCost] = useState(500000);
-  const [lossValue, setLossValue] = useState(150000);
+  const [sumInsured, setSumInsured] = useState(0);
+  const [actualRebuildCost, setActualRebuildCost] = useState(0);
+  const [lossValue, setLossValue] = useState(0);
 
   // Chat States
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
@@ -143,7 +140,10 @@ export default function ClaimLinApp() {
   };
 
   const handleLoadDemo = () => {
-    setUploadedFiles(DEMO_CLAIM.documents);
+    setUploadedFiles(DEMO_CLAIM);
+    setSumInsured(350000);
+    setActualRebuildCost(450000);
+    setLossValue(120000);
     analyzePolicy();
   };
 
@@ -192,7 +192,13 @@ export default function ClaimLinApp() {
 
   const withheldAmount = 12500; // Mock RCV withheld
 
-  const hiddenDamages = useMemo(() => getMockHiddenDamages(disasterType), [disasterType]);
+  const hiddenDamages = useMemo(() => getMockHiddenDamages(), []);
+
+  // Hydration fix for PDF
+  const [isClient, setIsClient] = useState(false);
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   return (
     <div className={`flex flex-col h-screen bg-slate-50 text-slate-900 overflow-hidden ${easyMode ? 'text-lg' : 'text-sm'}`}>
@@ -202,7 +208,7 @@ export default function ClaimLinApp() {
       <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
         
         {/* LEFT PANEL: Smart Source Vault */}
-        <aside className="w-full md:w-80 border-r border-slate-200 bg-white flex flex-col overflow-y-auto">
+        <aside className="w-full md:w-80 border-b md:border-b-0 md:border-r border-slate-200 bg-white flex flex-col overflow-y-auto">
           <div className="p-4 border-b border-slate-100 flex flex-col gap-2">
             <Button variant="primary" className="w-full justify-start gap-2 py-3 rounded-2xl shadow-purple-600/5">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
@@ -234,7 +240,7 @@ export default function ClaimLinApp() {
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="w-full mt-1 border-slate-100 hover:border-slate-200"
+                className="w-full mt-1 border-slate-100 hover:border-slate-200 bg-purple-50/30 text-purple-700"
                 onClick={handleLoadDemo}
               >
                 {t.loadDemo}
@@ -243,7 +249,10 @@ export default function ClaimLinApp() {
 
             {/* Source Upload Slots */}
             <div className="flex flex-col gap-4">
-              <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Sources</span>
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Sources</span>
+                <span className="text-[10px] font-bold text-slate-300 italic">{Object.keys(uploadedFiles).length} files</span>
+              </div>
               
               <DocumentUpload
                 uploadedFiles={uploadedFiles}
@@ -254,7 +263,7 @@ export default function ClaimLinApp() {
               
               {/* Custom Photo Shield Indicator */}
               {uploadedFiles.photos && (
-                <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center gap-3">
+                <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center gap-3 animate-fadeIn">
                   <FraudShieldIcon active={true} />
                   <div>
                     <p className="text-[11px] font-black text-emerald-700 uppercase">FraudShield Active</p>
@@ -270,18 +279,28 @@ export default function ClaimLinApp() {
         </aside>
 
         {/* MIDDLE PANEL: Defender Chat */}
-        <main className="flex-1 flex flex-col bg-slate-50 relative min-h-[400px]">
-          <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
-            {chatMessages.map((msg, idx) => (
-              <div key={idx} className={`max-w-[80%] flex flex-col gap-1 ${msg.sender === 'user' ? 'self-end items-end' : 'self-start'}`}>
-                <div className={`px-4 py-3 rounded-2xl shadow-sm text-sm leading-relaxed ${
-                  msg.sender === 'user' ? 'bg-purple-600 text-white rounded-tr-none' : 'bg-white text-slate-800 border border-slate-200 rounded-tl-none'
-                }`}>
-                  {msg.text}
+        <main className="flex-1 flex flex-col bg-slate-50 relative min-h-[500px] border-b md:border-b-0">
+          <div className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col gap-4">
+            {Object.keys(uploadedFiles).length === 0 ? (
+              <div className="flex-1 flex flex-col items-center justify-center text-center p-8 opacity-40">
+                <div className="p-4 bg-slate-200 rounded-full mb-4">
+                  <svg className="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
                 </div>
-                {msg.citation && <SourceChip source={msg.citation} />}
+                <p className="text-sm font-black uppercase tracking-widest text-slate-500">Ready for audit</p>
+                <p className="text-xs text-slate-400 mt-1">Upload a policy or load a demo to start the analysis</p>
               </div>
-            ))}
+            ) : (
+              chatMessages.map((msg, idx) => (
+                <div key={idx} className={`max-w-[85%] md:max-w-[80%] flex flex-col gap-1 ${msg.sender === 'user' ? 'self-end items-end' : 'self-start'} animate-fadeIn`}>
+                  <div className={`px-4 py-3 rounded-2xl shadow-sm text-sm leading-relaxed ${
+                    msg.sender === 'user' ? 'bg-purple-600 text-white rounded-tr-none' : 'bg-white text-slate-800 border border-slate-200 rounded-tl-none'
+                  }`}>
+                    {msg.text}
+                  </div>
+                  {msg.citation && <SourceChip source={msg.citation} />}
+                </div>
+              ))
+            )}
             {loading.chat && (
               <div className="self-start bg-white border border-slate-200 rounded-2xl rounded-tl-none px-4 py-3 text-xs text-slate-400 animate-pulse">
                 {lang === 'EN' ? 'Thinking...' : 'Berfikir...'}
@@ -290,13 +309,15 @@ export default function ClaimLinApp() {
           </div>
 
           {/* Chat Controls */}
-          <div className="p-6 bg-gradient-to-t from-slate-50 to-transparent">
+          <div className="p-4 md:p-6 bg-gradient-to-t from-slate-50 to-transparent">
             {/* Predictive Chips */}
-            <div className="flex flex-wrap gap-2 mb-4">
-              {t.predictive.map((p, i) => (
-                <PredictivePromptChip key={i} text={p} onClick={handleChatSend} />
-              ))}
-            </div>
+            {uploadedFiles.policy && (
+              <div className="flex flex-wrap gap-2 mb-4">
+                {t.predictive.map((p, i) => (
+                  <PredictivePromptChip key={i} text={p} onClick={handleChatSend} />
+                ))}
+              </div>
+            )}
 
             <form 
               onSubmit={(e) => { e.preventDefault(); handleChatSend(chatInput); setChatInput(""); }}
@@ -309,7 +330,7 @@ export default function ClaimLinApp() {
                 placeholder={lang === 'EN' ? "Ask Defender anything..." : "Tanya Defender apa sahaja..."}
                 className="flex-1 px-4 py-3 bg-transparent outline-none text-sm font-medium"
               />
-              <Button type="submit" disabled={loading.chat} className="rounded-xl px-6">
+              <Button type="submit" disabled={loading.chat || !uploadedFiles.policy} className="rounded-xl px-4 md:px-6">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                 </svg>
@@ -320,10 +341,16 @@ export default function ClaimLinApp() {
 
         {/* RIGHT PANEL: Audit & Action Center */}
         <aside className="w-full md:w-96 border-l border-slate-200 bg-white flex flex-col overflow-y-auto">
-          <div className="p-6 flex flex-col gap-8">
+          <div className="p-4 md:p-6 flex flex-col gap-8">
             <div className="flex flex-col gap-2">
               <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{t.auditTitle}</span>
-              <PayoutBarChart insurerOffer={insurerOffer} fairEntitlement={fairEntitlement} lang={lang} />
+              {Object.keys(uploadedFiles).length > 0 ? (
+                <PayoutBarChart insurerOffer={insurerOffer} fairEntitlement={fairEntitlement} lang={lang} />
+              ) : (
+                <div className="p-6 text-center border-2 border-dashed border-slate-100 rounded-2xl opacity-50">
+                  <p className="text-[10px] font-black text-slate-300 uppercase">Valuation pending</p>
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col gap-2">
@@ -338,7 +365,7 @@ export default function ClaimLinApp() {
             <div className="flex flex-col gap-2">
               <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Policy Audit</span>
               {policyAnalysis ? (
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-4 animate-fadeIn">
                   <PolicySummaryCards analysis={policyAnalysis} lang={lang} />
                   <WarrantyAlerts risks={policyAnalysis.warrantyRisks} lang={lang} />
                 </div>
@@ -351,7 +378,13 @@ export default function ClaimLinApp() {
 
             <div className="flex flex-col gap-2">
               <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Hidden Hazard Audit</span>
-              <HiddenDamageList items={hiddenDamages} lang={lang} />
+              {policyAnalysis ? (
+                <HiddenDamageList items={hiddenDamages} lang={lang} />
+              ) : (
+                <div className="p-4 text-center border-2 border-dashed border-slate-50 rounded-2xl opacity-30">
+                  <p className="text-[10px] font-bold text-slate-300">Awaiting Analysis</p>
+                </div>
+              )}
             </div>
 
             <div className="mt-auto pt-6 border-t border-slate-100">
@@ -368,8 +401,8 @@ export default function ClaimLinApp() {
                   fileName="ClaimLin_Appeal_Package.pdf"
                 >
                   {({ loading: pdfLoading }) => (
-                    <Button
-                      disabled={pdfLoading}
+                    <Button 
+                      disabled={pdfLoading || !policyAnalysis}
                       className="w-full py-4 rounded-2xl text-sm gap-2"
                     >
                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
