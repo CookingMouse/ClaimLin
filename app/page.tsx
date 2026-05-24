@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useSyncExternalStore } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   PropertyType,
   DisasterType,
@@ -41,10 +41,6 @@ import ClawbackTracker from "@/components/ui/ClawbackTracker";
 import { PDFDownloadLink } from "@react-pdf/renderer";
 import ClaimLetterPDF from "@/components/pdf/ClaimLetterPDF";
 
-const subscribeToClientSnapshot = () => () => {};
-const getClientSnapshot = () => true;
-const getServerSnapshot = () => false;
-
 export default function ClaimLinApp() {
   const [lang, setLang] = useState<"EN" | "BM">("EN");
   const [easyMode, setEasyMode] = useState(false);
@@ -56,11 +52,6 @@ export default function ClaimLinApp() {
   >({});
   const [analyzing, setAnalyzing] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const isClient = useSyncExternalStore(
-    subscribeToClientSnapshot,
-    getClientSnapshot,
-    getServerSnapshot,
-  );
 
   // Policy Analysis State
   const [policyAnalysis, setPolicyAnalysis] = useState<PolicyAnalysis | null>(
@@ -68,9 +59,9 @@ export default function ClaimLinApp() {
   );
 
   // Valuation States
-  const [sumInsured, setSumInsured] = useState(350000);
-  const [actualRebuildCost, setActualRebuildCost] = useState(500000);
-  const [lossValue, setLossValue] = useState(150000);
+  const [sumInsured, setSumInsured] = useState(0);
+  const [actualRebuildCost, setActualRebuildCost] = useState(0);
+  const [lossValue, setLossValue] = useState(0);
 
   // Chat States
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
@@ -84,6 +75,12 @@ export default function ClaimLinApp() {
   // Letter / Modal States
   const [showLetterModal, setShowLetterModal] = useState(false);
   const [generatedLetter, setGeneratedLetter] = useState<string>("");
+
+  // Mobile tab navigation
+  const [activeTab, setActiveTab] = useState<"sources" | "chat" | "audit">("chat");
+
+  // Welcome banner
+  const [showWelcomeBanner, setShowWelcomeBanner] = useState(true);
 
   // API Loading & Error States
   const [loading, setLoading] = useState({
@@ -150,6 +147,9 @@ export default function ClaimLinApp() {
 
   const handleLoadDemo = () => {
     setUploadedFiles(DEMO_CLAIM.documents);
+    setSumInsured(350000);
+    setActualRebuildCost(450000);
+    setLossValue(120000);
     analyzePolicy();
   };
 
@@ -166,6 +166,7 @@ export default function ClaimLinApp() {
   const handleChatSend = async (text: string) => {
     if (!text.trim() || loading.chat) return;
 
+    setShowWelcomeBanner(false);
     setChatMessages((prev) => [...prev, { sender: "user", text }]);
     setLoading((prev) => ({ ...prev, chat: true }));
 
@@ -200,6 +201,12 @@ export default function ClaimLinApp() {
 
   const hiddenDamages = useMemo(() => getMockHiddenDamages(disasterType), [disasterType]);
 
+  // Hydration fix for PDF
+  const [isClient, setIsClient] = useState(false);
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   return (
     <div className={`flex flex-col h-screen bg-slate-50 text-slate-900 overflow-hidden ${easyMode ? 'text-lg' : 'text-sm'}`}>
       <Header lang={lang} setLang={setLang} easyMode={easyMode} setEasyMode={setEasyMode} />
@@ -208,7 +215,7 @@ export default function ClaimLinApp() {
       <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
         
         {/* LEFT PANEL: Smart Source Vault */}
-        <aside className="w-full md:w-80 border-r border-slate-200 bg-white flex flex-col overflow-y-auto">
+        <aside className={`md:w-80 md:border-r border-slate-200 bg-white flex-col overflow-y-auto ${activeTab === 'sources' ? 'flex flex-1' : 'hidden md:flex'}`}>
           <div className="p-4 border-b border-slate-100 flex flex-col gap-2">
             <Button variant="primary" className="w-full justify-start gap-2 py-3 rounded-2xl shadow-purple-600/5">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
@@ -223,24 +230,27 @@ export default function ClaimLinApp() {
             <div className="flex flex-col gap-2">
               <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Selected Event</span>
               <div className="grid grid-cols-2 gap-2">
-                {["fire", "flood", "storm", "break-in"].map((type) => (
-                  <button
-                    key={type}
-                    onClick={() => setDisasterType(type as DisasterType)}
-                    className={`px-3 py-2 rounded-xl border text-[10px] font-black uppercase transition-all ${
-                      disasterType === type ? 'bg-purple-600 border-purple-600 text-white shadow-md' : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-300'
-                    }`}
-                  >
-                    {type}
-                  </button>
-                ))}
+                {(["fire", "flood", "storm", "break-in"] as const).map((type) => {
+                  const icons = { fire: "🔥", flood: "🌊", storm: "⛈️", "break-in": "🔓" };
+                  return (
+                    <button
+                      key={type}
+                      onClick={() => setDisasterType(type)}
+                      className={`px-3 py-2 rounded-xl border text-[10px] font-black uppercase transition-all ${
+                        disasterType === type ? 'bg-purple-600 border-purple-600 text-white shadow-md' : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-300'
+                      }`}
+                    >
+                      {icons[type]} {type}
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Load Demo Claim Button */}
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="w-full mt-1 border-slate-100 hover:border-slate-200"
+                className="w-full mt-1 border-slate-100 hover:border-slate-200 bg-purple-50/30 text-purple-700"
                 onClick={handleLoadDemo}
               >
                 {t.loadDemo}
@@ -249,7 +259,10 @@ export default function ClaimLinApp() {
 
             {/* Source Upload Slots */}
             <div className="flex flex-col gap-4">
-              <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Sources</span>
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Sources</span>
+                <span className="text-[10px] font-bold text-slate-300 italic">{Object.keys(uploadedFiles).length} files</span>
+              </div>
               
               <DocumentUpload
                 uploadedFiles={uploadedFiles}
@@ -260,7 +273,7 @@ export default function ClaimLinApp() {
               
               {/* Custom Photo Shield Indicator */}
               {uploadedFiles.photos && (
-                <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center gap-3">
+                <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center gap-3 animate-fadeIn">
                   <FraudShieldIcon active={true} />
                   <div>
                     <p className="text-[11px] font-black text-emerald-700 uppercase">FraudShield Active</p>
@@ -276,18 +289,41 @@ export default function ClaimLinApp() {
         </aside>
 
         {/* MIDDLE PANEL: Defender Chat */}
-        <main className="flex-1 flex flex-col bg-slate-50 relative min-h-[400px]">
-          <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
-            {chatMessages.map((msg, idx) => (
-              <div key={idx} className={`max-w-[80%] flex flex-col gap-1 ${msg.sender === 'user' ? 'self-end items-end' : 'self-start'}`}>
-                <div className={`px-4 py-3 rounded-2xl shadow-sm text-sm leading-relaxed ${
-                  msg.sender === 'user' ? 'bg-purple-600 text-white rounded-tr-none' : 'bg-white text-slate-800 border border-slate-200 rounded-tl-none'
-                }`}>
-                  {msg.text}
-                </div>
-                {msg.citation && <SourceChip source={msg.citation} />}
+        <main className={`flex-1 flex-col bg-slate-50 relative ${activeTab === 'chat' ? 'flex' : 'hidden md:flex'}`}>
+          <div className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col gap-4">
+            {showWelcomeBanner && Object.keys(uploadedFiles).length === 0 && (
+              <div className="p-4 bg-purple-50 border border-purple-100 rounded-2xl flex items-start gap-3">
+                <span className="text-lg">💡</span>
+                <p className="flex-1 text-xs font-medium text-purple-800 leading-relaxed">
+                  {lang === 'EN'
+                    ? 'Upload your insurance policy to the left to get started. Or click ⚡ Load Demo Claim to see a live example.'
+                    : 'Muat naik polisi insurans anda di sebelah kiri untuk mula. Atau klik ⚡ Muat Tuntutan Demo untuk lihat contoh langsung.'}
+                </p>
+                <button onClick={() => setShowWelcomeBanner(false)} className="text-purple-300 hover:text-purple-500 shrink-0">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
               </div>
-            ))}
+            )}
+            {Object.keys(uploadedFiles).length === 0 ? (
+              <div className="flex-1 flex flex-col items-center justify-center text-center p-8 opacity-40">
+                <div className="p-4 bg-slate-200 rounded-full mb-4">
+                  <svg className="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
+                </div>
+                <p className="text-sm font-black uppercase tracking-widest text-slate-500">Ready for audit</p>
+                <p className="text-xs text-slate-400 mt-1">Upload a policy or load a demo to start the analysis</p>
+              </div>
+            ) : (
+              chatMessages.map((msg, idx) => (
+                <div key={idx} className={`max-w-[85%] md:max-w-[80%] flex flex-col gap-1 ${msg.sender === 'user' ? 'self-end items-end' : 'self-start'} animate-fadeIn`}>
+                  <div className={`px-4 py-3 rounded-2xl shadow-sm text-sm leading-relaxed ${
+                    msg.sender === 'user' ? 'bg-purple-600 text-white rounded-tr-none' : 'bg-white text-slate-800 border border-slate-200 rounded-tl-none'
+                  }`}>
+                    {msg.text}
+                  </div>
+                  {msg.citation && <SourceChip source={msg.citation} />}
+                </div>
+              ))
+            )}
             {loading.chat && (
               <div className="self-start bg-white border border-slate-200 rounded-2xl rounded-tl-none px-4 py-3 text-xs text-slate-400 animate-pulse">
                 {lang === 'EN' ? 'Thinking...' : 'Berfikir...'}
@@ -296,13 +332,15 @@ export default function ClaimLinApp() {
           </div>
 
           {/* Chat Controls */}
-          <div className="p-6 bg-gradient-to-t from-slate-50 to-transparent">
+          <div className="p-4 md:p-6 bg-gradient-to-t from-slate-50 to-transparent">
             {/* Predictive Chips */}
-            <div className="flex flex-wrap gap-2 mb-4">
-              {t.predictive.map((p, i) => (
-                <PredictivePromptChip key={i} text={p} onClick={handleChatSend} />
-              ))}
-            </div>
+            {uploadedFiles.policy && (
+              <div className="flex flex-wrap gap-2 mb-4">
+                {t.predictive.map((p, i) => (
+                  <PredictivePromptChip key={i} text={p} onClick={handleChatSend} />
+                ))}
+              </div>
+            )}
 
             <form 
               onSubmit={(e) => { e.preventDefault(); handleChatSend(chatInput); setChatInput(""); }}
@@ -315,7 +353,7 @@ export default function ClaimLinApp() {
                 placeholder={lang === 'EN' ? "Ask Defender anything..." : "Tanya Defender apa sahaja..."}
                 className="flex-1 px-4 py-3 bg-transparent outline-none text-sm font-medium"
               />
-              <Button type="submit" disabled={loading.chat} className="rounded-xl px-6">
+              <Button type="submit" disabled={loading.chat || !uploadedFiles.policy} className="rounded-xl px-4 md:px-6">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                 </svg>
@@ -325,11 +363,17 @@ export default function ClaimLinApp() {
         </main>
 
         {/* RIGHT PANEL: Audit & Action Center */}
-        <aside className="w-full md:w-96 border-l border-slate-200 bg-white flex flex-col overflow-y-auto">
-          <div className="p-6 flex flex-col gap-8">
+        <aside className={`md:w-96 md:border-l border-slate-200 bg-white flex-col overflow-y-auto ${activeTab === 'audit' ? 'flex flex-1' : 'hidden md:flex'}`}>
+          <div className="p-4 md:p-6 flex flex-col gap-8">
             <div className="flex flex-col gap-2">
               <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{t.auditTitle}</span>
-              <PayoutBarChart insurerOffer={insurerOffer} fairEntitlement={fairEntitlement} lang={lang} />
+              {Object.keys(uploadedFiles).length > 0 ? (
+                <PayoutBarChart insurerOffer={insurerOffer} fairEntitlement={fairEntitlement} lang={lang} />
+              ) : (
+                <div className="p-6 text-center border-2 border-dashed border-slate-100 rounded-2xl opacity-50">
+                  <p className="text-[10px] font-black text-slate-300 uppercase">Valuation pending</p>
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col gap-2">
@@ -344,7 +388,7 @@ export default function ClaimLinApp() {
             <div className="flex flex-col gap-2">
               <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Policy Audit</span>
               {policyAnalysis ? (
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-4 animate-fadeIn">
                   <PolicySummaryCards analysis={policyAnalysis} lang={lang} />
                   <WarrantyAlerts risks={policyAnalysis.warrantyRisks} lang={lang} />
                 </div>
@@ -357,7 +401,13 @@ export default function ClaimLinApp() {
 
             <div className="flex flex-col gap-2">
               <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Hidden Hazard Audit</span>
-              <HiddenDamageList items={hiddenDamages} lang={lang} />
+              {policyAnalysis ? (
+                <HiddenDamageList items={hiddenDamages} lang={lang} />
+              ) : (
+                <div className="p-4 text-center border-2 border-dashed border-slate-50 rounded-2xl opacity-30">
+                  <p className="text-[10px] font-bold text-slate-300">Awaiting Analysis</p>
+                </div>
+              )}
             </div>
 
             <div className="mt-auto pt-6 border-t border-slate-100">
@@ -374,8 +424,8 @@ export default function ClaimLinApp() {
                   fileName="ClaimLin_Appeal_Package.pdf"
                 >
                   {({ loading: pdfLoading }) => (
-                    <Button
-                      disabled={pdfLoading}
+                    <Button 
+                      disabled={pdfLoading || !policyAnalysis}
                       className="w-full py-4 rounded-2xl text-sm gap-2"
                     >
                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
@@ -392,7 +442,33 @@ export default function ClaimLinApp() {
 
       </div>
 
-      <Footer lang={lang} />
+      {/* Mobile Tab Bar */}
+      <nav className="md:hidden flex border-t border-slate-200 bg-white flex-none">
+        {(["sources", "chat", "audit"] as const).map((tab) => {
+          const labels = {
+            sources: lang === "EN" ? "Sources" : "Sumber",
+            chat: lang === "EN" ? "Chat" : "Sembang",
+            audit: lang === "EN" ? "Audit" : "Audit",
+          };
+          const tabIcons = {
+            sources: <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />,
+            chat: <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />,
+            audit: <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />,
+          };
+          return (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`flex-1 py-3 flex flex-col items-center gap-1 text-[10px] font-black uppercase transition-colors ${activeTab === tab ? "text-purple-600" : "text-slate-400"}`}
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>{tabIcons[tab]}</svg>
+              {labels[tab]}
+            </button>
+          );
+        })}
+      </nav>
+
+      <div className="hidden md:block"><Footer lang={lang} /></div>
     </div>
   );
 }
