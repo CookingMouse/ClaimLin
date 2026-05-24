@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useSyncExternalStore, useRef, useEffect } from "react";
+import React, { useState, useSyncExternalStore, useRef, useEffect } from "react";
 import {
   PropertyType,
   DisasterType,
@@ -241,22 +241,15 @@ export default function ClaimLinApp() {
     }
   };
 
-  const claimStrength = useMemo(
-    () => calculateClaimStrength(uploadedFiles),
-    [uploadedFiles]
-  );
-
-  const valuation = useMemo(
-    () => calculateValuation(sumInsured, actualRebuildCost, lossValue),
-    [sumInsured, actualRebuildCost, lossValue]
-  );
+  const claimStrength = calculateClaimStrength(uploadedFiles);
+  const valuation = calculateValuation(sumInsured, actualRebuildCost, lossValue);
 
   const insurerOffer = valuation.acvPayout * 0.65;
   const fairEntitlement = valuation.acvPayout;
 
-  const withheldAmount = 12500; // Mock RCV withheld
+  const withheldAmount = 12500;
 
-  const hiddenDamages = useMemo(() => getMockHiddenDamages(disasterType), [disasterType]);
+  const hiddenDamages = getMockHiddenDamages(disasterType);
 
   const isClient = useSyncExternalStore(() => () => {}, () => true, () => false);
 
