@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useSyncExternalStore } from "react";
 import {
   PropertyType,
   DisasterType,
@@ -41,6 +41,10 @@ import ClawbackTracker from "@/components/ui/ClawbackTracker";
 import { PDFDownloadLink } from "@react-pdf/renderer";
 import ClaimLetterPDF from "@/components/pdf/ClaimLetterPDF";
 
+const subscribeToClientSnapshot = () => () => {};
+const getClientSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 export default function ClaimLinApp() {
   const [lang, setLang] = useState<"EN" | "BM">("EN");
   const [easyMode, setEasyMode] = useState(false);
@@ -52,9 +56,11 @@ export default function ClaimLinApp() {
   >({});
   const [analyzing, setAnalyzing] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [isClient, setIsClient] = useState(false);
-
-  useEffect(() => { setIsClient(true); }, []);
+  const isClient = useSyncExternalStore(
+    subscribeToClientSnapshot,
+    getClientSnapshot,
+    getServerSnapshot,
+  );
 
   // Policy Analysis State
   const [policyAnalysis, setPolicyAnalysis] = useState<PolicyAnalysis | null>(

@@ -1,5 +1,7 @@
 import type { ApiResponse, DisasterType } from "@/types/index";
 
+export const runtime = "nodejs";
+
 export type PredictiveChip = {
   id: string;
   message: string;
