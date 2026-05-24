@@ -76,6 +76,12 @@ export default function ClaimLinApp() {
   const [showLetterModal, setShowLetterModal] = useState(false);
   const [generatedLetter, setGeneratedLetter] = useState<string>("");
 
+  // Mobile tab navigation
+  const [activeTab, setActiveTab] = useState<"sources" | "chat" | "audit">("chat");
+
+  // Welcome banner
+  const [showWelcomeBanner, setShowWelcomeBanner] = useState(true);
+
   // API Loading & Error States
   const [loading, setLoading] = useState({
     policy: false,
@@ -140,7 +146,7 @@ export default function ClaimLinApp() {
   };
 
   const handleLoadDemo = () => {
-    setUploadedFiles(DEMO_CLAIM);
+    setUploadedFiles(DEMO_CLAIM.documents);
     setSumInsured(350000);
     setActualRebuildCost(450000);
     setLossValue(120000);
@@ -160,6 +166,7 @@ export default function ClaimLinApp() {
   const handleChatSend = async (text: string) => {
     if (!text.trim() || loading.chat) return;
 
+    setShowWelcomeBanner(false);
     setChatMessages((prev) => [...prev, { sender: "user", text }]);
     setLoading((prev) => ({ ...prev, chat: true }));
 
@@ -192,7 +199,7 @@ export default function ClaimLinApp() {
 
   const withheldAmount = 12500; // Mock RCV withheld
 
-  const hiddenDamages = useMemo(() => getMockHiddenDamages(), []);
+  const hiddenDamages = useMemo(() => getMockHiddenDamages(disasterType), [disasterType]);
 
   // Hydration fix for PDF
   const [isClient, setIsClient] = useState(false);
@@ -208,7 +215,7 @@ export default function ClaimLinApp() {
       <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
         
         {/* LEFT PANEL: Smart Source Vault */}
-        <aside className="w-full md:w-80 border-b md:border-b-0 md:border-r border-slate-200 bg-white flex flex-col overflow-y-auto">
+        <aside className={`md:w-80 md:border-r border-slate-200 bg-white flex-col overflow-y-auto ${activeTab === 'sources' ? 'flex flex-1' : 'hidden md:flex'}`}>
           <div className="p-4 border-b border-slate-100 flex flex-col gap-2">
             <Button variant="primary" className="w-full justify-start gap-2 py-3 rounded-2xl shadow-purple-600/5">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
@@ -223,17 +230,20 @@ export default function ClaimLinApp() {
             <div className="flex flex-col gap-2">
               <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Selected Event</span>
               <div className="grid grid-cols-2 gap-2">
-                {["fire", "flood", "storm", "break-in"].map((type) => (
-                  <button
-                    key={type}
-                    onClick={() => setDisasterType(type as DisasterType)}
-                    className={`px-3 py-2 rounded-xl border text-[10px] font-black uppercase transition-all ${
-                      disasterType === type ? 'bg-purple-600 border-purple-600 text-white shadow-md' : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-300'
-                    }`}
-                  >
-                    {type}
-                  </button>
-                ))}
+                {(["fire", "flood", "storm", "break-in"] as const).map((type) => {
+                  const icons = { fire: "🔥", flood: "🌊", storm: "⛈️", "break-in": "🔓" };
+                  return (
+                    <button
+                      key={type}
+                      onClick={() => setDisasterType(type)}
+                      className={`px-3 py-2 rounded-xl border text-[10px] font-black uppercase transition-all ${
+                        disasterType === type ? 'bg-purple-600 border-purple-600 text-white shadow-md' : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-300'
+                      }`}
+                    >
+                      {icons[type]} {type}
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Load Demo Claim Button */}
@@ -279,8 +289,21 @@ export default function ClaimLinApp() {
         </aside>
 
         {/* MIDDLE PANEL: Defender Chat */}
-        <main className="flex-1 flex flex-col bg-slate-50 relative min-h-[500px] border-b md:border-b-0">
+        <main className={`flex-1 flex-col bg-slate-50 relative ${activeTab === 'chat' ? 'flex' : 'hidden md:flex'}`}>
           <div className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col gap-4">
+            {showWelcomeBanner && Object.keys(uploadedFiles).length === 0 && (
+              <div className="p-4 bg-purple-50 border border-purple-100 rounded-2xl flex items-start gap-3">
+                <span className="text-lg">💡</span>
+                <p className="flex-1 text-xs font-medium text-purple-800 leading-relaxed">
+                  {lang === 'EN'
+                    ? 'Upload your insurance policy to the left to get started. Or click ⚡ Load Demo Claim to see a live example.'
+                    : 'Muat naik polisi insurans anda di sebelah kiri untuk mula. Atau klik ⚡ Muat Tuntutan Demo untuk lihat contoh langsung.'}
+                </p>
+                <button onClick={() => setShowWelcomeBanner(false)} className="text-purple-300 hover:text-purple-500 shrink-0">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+            )}
             {Object.keys(uploadedFiles).length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center text-center p-8 opacity-40">
                 <div className="p-4 bg-slate-200 rounded-full mb-4">
@@ -340,7 +363,7 @@ export default function ClaimLinApp() {
         </main>
 
         {/* RIGHT PANEL: Audit & Action Center */}
-        <aside className="w-full md:w-96 border-l border-slate-200 bg-white flex flex-col overflow-y-auto">
+        <aside className={`md:w-96 md:border-l border-slate-200 bg-white flex-col overflow-y-auto ${activeTab === 'audit' ? 'flex flex-1' : 'hidden md:flex'}`}>
           <div className="p-4 md:p-6 flex flex-col gap-8">
             <div className="flex flex-col gap-2">
               <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{t.auditTitle}</span>
@@ -419,7 +442,33 @@ export default function ClaimLinApp() {
 
       </div>
 
-      <Footer lang={lang} />
+      {/* Mobile Tab Bar */}
+      <nav className="md:hidden flex border-t border-slate-200 bg-white flex-none">
+        {(["sources", "chat", "audit"] as const).map((tab) => {
+          const labels = {
+            sources: lang === "EN" ? "Sources" : "Sumber",
+            chat: lang === "EN" ? "Chat" : "Sembang",
+            audit: lang === "EN" ? "Audit" : "Audit",
+          };
+          const tabIcons = {
+            sources: <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />,
+            chat: <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />,
+            audit: <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />,
+          };
+          return (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`flex-1 py-3 flex flex-col items-center gap-1 text-[10px] font-black uppercase transition-colors ${activeTab === tab ? "text-purple-600" : "text-slate-400"}`}
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>{tabIcons[tab]}</svg>
+              {labels[tab]}
+            </button>
+          );
+        })}
+      </nav>
+
+      <div className="hidden md:block"><Footer lang={lang} /></div>
     </div>
   );
 }
