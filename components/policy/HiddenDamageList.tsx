@@ -6,7 +6,7 @@ interface HiddenDamageListProps {
   lang: "EN" | "BM";
 }
 
-const HiddenDamageList: React.FC<HiddenDamageListProps> = ({ items, lang }) => {
+const HiddenDamageList: React.FC<HiddenDamageListProps> = ({ items }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {items.map((item) => (

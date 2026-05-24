@@ -25,7 +25,7 @@ const ClaimStrengthGauge: React.FC<ClaimStrengthGaugeProps> = ({
     }
   };
 
-  const getScoreDesc = (s: number) => {
+  const getScoreDesc = () => {
     if (lang === "EN") {
       return "Providing legal reports secures your compensation faster.";
     } else {
@@ -52,7 +52,7 @@ const ClaimStrengthGauge: React.FC<ClaimStrengthGaugeProps> = ({
             {getScoreMessage(score)}
           </p>
           <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-            {getScoreDesc(score)}
+            {getScoreDesc()}
           </p>
         </div>
       </div>
