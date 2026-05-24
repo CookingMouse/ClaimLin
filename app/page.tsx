@@ -586,7 +586,8 @@ export default function ClaimLinApp() {
         </div>
       )}
 
-      <div className="hidden md:block"><Footer lang={lang} /></div>
+      <div className="hidden"><Footer lang={lang} /></div>
     </div>
   );
 }
+
