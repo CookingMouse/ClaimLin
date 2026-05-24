@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState, useSyncExternalStore } from "react";
+import React, { useState, useSyncExternalStore, useRef, useEffect } from "react";
 import {
   PropertyType,
   DisasterType,
   DocumentKey,
   ClaimDocument,
+  LogEntry,
   ChatMessage,
   PolicyAnalysis,
 } from "@/types";
@@ -46,6 +47,10 @@ export default function ClaimLinApp() {
     Partial<Record<DocumentKey, ClaimDocument>>
   >({});
 
+  // Resizable Panel State
+  const [leftWidth, setLeftWidth] = useState(320);
+  const [rightWidth, setRightWidth] = useState(384);
+
   // Policy Analysis State
   const [policyAnalysis, setPolicyAnalysis] = useState<PolicyAnalysis | null>(
     null
@@ -80,6 +85,36 @@ export default function ClaimLinApp() {
     chat: false,
     letter: false,
   });
+
+  const dragging = useRef<'left' | 'right' | null>(null);
+  const dragStart = useRef(0);
+  const dragStartWidth = useRef(0);
+
+  const startDrag = (side: 'left' | 'right') => (e: React.MouseEvent) => {
+    dragging.current = side;
+    dragStart.current = e.clientX;
+    dragStartWidth.current = side === 'left' ? leftWidth : rightWidth;
+    e.preventDefault();
+  };
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!dragging.current) return;
+      const delta = e.clientX - dragStart.current;
+      if (dragging.current === 'left') {
+        setLeftWidth(Math.max(220, Math.min(520, dragStartWidth.current + delta)));
+      } else {
+        setRightWidth(Math.max(280, Math.min(560, dragStartWidth.current - delta)));
+      }
+    };
+    const onUp = () => { dragging.current = null; };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, []);
 
   const t = {
     EN: {
@@ -223,10 +258,13 @@ export default function ClaimLinApp() {
       <Header lang={lang} setLang={setLang} easyMode={easyMode} setEasyMode={setEasyMode} />
 
       {/* Main 3-Panel Layout */}
-      <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
+      <div className="flex flex-1 overflow-hidden flex-col md:flex-row min-h-0">
         
         {/* LEFT PANEL: Smart Source Vault */}
-        <aside className={`md:w-80 md:border-r border-slate-200 bg-white flex-col overflow-y-auto ${activeTab === 'sources' ? 'flex flex-1' : 'hidden md:flex'}`}>
+        <aside 
+          className={`md:h-full md:border-r border-slate-200 bg-white flex-col overflow-y-auto ${activeTab === 'sources' ? 'flex flex-1' : 'hidden md:flex'}`}
+          style={{ width: isClient ? leftWidth : undefined }}
+        >
           <div className="p-4 border-b border-slate-100 flex flex-col gap-2">
             <Button variant="primary" className="w-full justify-start gap-2 py-3 rounded-2xl shadow-purple-600/5">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
@@ -342,6 +380,11 @@ export default function ClaimLinApp() {
           </div>
         </aside>
 
+        <div
+          className="hidden md:block w-1 cursor-col-resize bg-slate-200 hover:bg-purple-400 transition-colors flex-none"
+          onMouseDown={startDrag('left')}
+        />
+
         {/* MIDDLE PANEL: Defender Chat */}
         <main className={`flex-1 flex-col bg-slate-50 relative ${activeTab === 'chat' ? 'flex' : 'hidden md:flex'}`}>
           <div className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col gap-4">
@@ -416,8 +459,16 @@ export default function ClaimLinApp() {
           </div>
         </main>
 
+        <div
+          className="hidden md:block w-1 cursor-col-resize bg-slate-200 hover:bg-purple-400 transition-colors flex-none"
+          onMouseDown={startDrag('right')}
+        />
+
         {/* RIGHT PANEL: Audit & Action Center */}
-        <aside className={`md:w-96 md:border-l border-slate-200 bg-white flex-col overflow-y-auto ${activeTab === 'audit' ? 'flex flex-1' : 'hidden md:flex'}`}>
+        <aside 
+          className={`md:h-full md:border-l border-slate-200 bg-white flex-col overflow-y-auto ${activeTab === 'audit' ? 'flex flex-1' : 'hidden md:flex'}`}
+          style={{ width: isClient ? rightWidth : undefined }}
+        >
           <div className="p-4 md:p-6 flex flex-col gap-8">
             <div className="flex flex-col gap-2">
               <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{t.auditTitle}</span>
@@ -582,4 +633,3 @@ export default function ClaimLinApp() {
     </div>
   );
 }
-
