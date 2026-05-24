@@ -6,7 +6,6 @@ import {
   DisasterType,
   DocumentKey,
   ClaimDocument,
-  LogEntry,
   ChatMessage,
   PolicyAnalysis,
 } from "@/types";
@@ -89,13 +88,6 @@ export default function ClaimLinApp() {
   const dragging = useRef<'left' | 'right' | null>(null);
   const dragStart = useRef(0);
   const dragStartWidth = useRef(0);
-
-  const startDrag = (side: 'left' | 'right') => (e: React.MouseEvent) => {
-    dragging.current = side;
-    dragStart.current = e.clientX;
-    dragStartWidth.current = side === 'left' ? leftWidth : rightWidth;
-    e.preventDefault();
-  };
 
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
@@ -382,7 +374,7 @@ export default function ClaimLinApp() {
 
         <div
           className="hidden md:block w-1 cursor-col-resize bg-slate-200 hover:bg-purple-400 transition-colors flex-none"
-          onMouseDown={startDrag('left')}
+          onMouseDown={(e) => { dragging.current = 'left'; dragStart.current = e.clientX; dragStartWidth.current = leftWidth; e.preventDefault(); }}
         />
 
         {/* MIDDLE PANEL: Defender Chat */}
@@ -461,7 +453,7 @@ export default function ClaimLinApp() {
 
         <div
           className="hidden md:block w-1 cursor-col-resize bg-slate-200 hover:bg-purple-400 transition-colors flex-none"
-          onMouseDown={startDrag('right')}
+          onMouseDown={(e) => { dragging.current = 'right'; dragStart.current = e.clientX; dragStartWidth.current = rightWidth; e.preventDefault(); }}
         />
 
         {/* RIGHT PANEL: Audit & Action Center */}
