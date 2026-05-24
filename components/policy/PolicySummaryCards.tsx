@@ -22,7 +22,7 @@ const PolicySummaryCards: React.FC<PolicySummaryCardsProps> = ({
             {item.label}
           </span>
           <p
-            className={`text-xl font-black ${
+            className={`text-sm font-semibold ${
               item.status === "covered" ? "text-emerald-600" : "text-purple-600"
             }`}
           >
