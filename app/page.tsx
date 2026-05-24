@@ -19,16 +19,13 @@ import {
 import { DEMO_CLAIM } from "@/lib/mock-data";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import DocumentUpload from "@/components/claim/DocumentUpload";
 import ClaimStrengthGauge from "@/components/claim/ClaimStrengthGauge";
 import MissingDocChecklist from "@/components/claim/MissingDocChecklist";
-import AgentProgressLog from "@/components/claim/AgentProgressLog";
 import PolicySummaryCards from "@/components/policy/PolicySummaryCards";
 import WarrantyAlerts from "@/components/policy/WarrantyAlerts";
 import HiddenDamageList from "@/components/policy/HiddenDamageList";
-import LetterPreview from "@/components/dispute/LetterPreview";
 
 // New UI Components
 import FraudShieldIcon from "@/components/ui/FraudShieldIcon";
@@ -45,13 +42,10 @@ export default function ClaimLinApp() {
   const [lang, setLang] = useState<"EN" | "BM">("EN");
   const [easyMode, setEasyMode] = useState(false);
   const [disasterType, setDisasterType] = useState<DisasterType>("fire");
-  const [selectedProperty, setSelectedProperty] =
-    useState<PropertyType>("Landed Home");
+  const [selectedProperty] = useState<PropertyType>("Landed Home");
   const [uploadedFiles, setUploadedFiles] = useState<
     Partial<Record<DocumentKey, ClaimDocument>>
   >({});
-  const [analyzing, setAnalyzing] = useState(false);
-  const [logs, setLogs] = useState<LogEntry[]>([]);
 
   // Policy Analysis State
   const [policyAnalysis, setPolicyAnalysis] = useState<PolicyAnalysis | null>(
@@ -73,8 +67,7 @@ export default function ClaimLinApp() {
   const [chatInput, setChatInput] = useState("");
 
   // Letter / Modal States
-  const [showLetterModal, setShowLetterModal] = useState(false);
-  const [generatedLetter, setGeneratedLetter] = useState<string>("");
+  const [modalLetter, setModalLetter] = useState<string | null>(null);
 
   // Mobile tab navigation
   const [activeTab, setActiveTab] = useState<"sources" | "chat" | "audit">("chat");
@@ -184,6 +177,36 @@ export default function ClaimLinApp() {
     }, 1000);
   };
 
+  const handleGenerateLetter = async (type: 'claim' | 'dispute' | 'ofs') => {
+    setLoading(prev => ({ ...prev, letter: true }));
+    try {
+      let res;
+      if (type === 'claim') {
+        res = await fetch('/api/generate-claim-letter', {
+          method: 'POST',
+          body: JSON.stringify({ propertyType: selectedProperty, disasterType, valuation, policyAnalysis })
+        });
+      } else if (type === 'dispute') {
+        res = await fetch('/api/generate-dispute-letter', {
+          method: 'POST',
+          body: JSON.stringify({ insurerOfferText: "Insurer offer pending", policyAnalysis })
+        });
+      } else {
+        res = await fetch('/api/generate-ofs-letter', {
+          method: 'POST',
+          body: JSON.stringify({ claimData: { propertyType: selectedProperty, disasterType }, disputeLetterText: "Prior dispute letter" })
+        });
+      }
+      
+      const data = await res.json();
+      setModalLetter(data.letter || data.body);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(prev => ({ ...prev, letter: false }));
+    }
+  };
+
   const claimStrength = useMemo(
     () => calculateClaimStrength(uploadedFiles),
     [uploadedFiles]
@@ -281,6 +304,49 @@ export default function ClaimLinApp() {
 
             <ClaimStrengthGauge score={claimStrength.score} lang={lang} />
             <MissingDocChecklist uploadedFiles={uploadedFiles} lang={lang} />
+
+            {/* Valuation Inputs */}
+            <div className="flex flex-col gap-4 border-t border-slate-100 pt-4 mt-2 pb-8">
+              <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Valuation Parameters</span>
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-bold text-slate-500">Sum Insured (RM)</label>
+                  <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                    <span className="text-xs font-bold text-slate-400">RM</span>
+                    <input 
+                      type="number" 
+                      value={sumInsured} 
+                      onChange={(e) => setSumInsured(Number(e.target.value))}
+                      className="bg-transparent border-none outline-none text-xs font-black w-full"
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-bold text-slate-500">Actual Rebuild Cost (RM)</label>
+                  <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                    <span className="text-xs font-bold text-slate-400">RM</span>
+                    <input 
+                      type="number" 
+                      value={actualRebuildCost} 
+                      onChange={(e) => setActualRebuildCost(Number(e.target.value))}
+                      className="bg-transparent border-none outline-none text-xs font-black w-full"
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-bold text-slate-500">Estimated Loss Value (RM)</label>
+                  <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                    <span className="text-xs font-bold text-slate-400">RM</span>
+                    <input 
+                      type="number" 
+                      value={lossValue} 
+                      onChange={(e) => setLossValue(Number(e.target.value))}
+                      className="bg-transparent border-none outline-none text-xs font-black w-full"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </aside>
 
@@ -406,6 +472,40 @@ export default function ClaimLinApp() {
               )}
             </div>
 
+            {/* Generate Letter UI */}
+            <div className="flex flex-col gap-2">
+              <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Generate Letter</span>
+              <div className="grid grid-cols-3 gap-2">
+                <Button 
+                  variant="secondary" 
+                  size="sm" 
+                  onClick={() => handleGenerateLetter('claim')} 
+                  disabled={loading.letter || !policyAnalysis}
+                  className="text-[9px] px-1"
+                >
+                  {loading.letter ? '...' : 'Claim Letter'}
+                </Button>
+                <Button 
+                  variant="secondary" 
+                  size="sm" 
+                  onClick={() => handleGenerateLetter('dispute')} 
+                  disabled={loading.letter}
+                  className="text-[9px] px-1"
+                >
+                  {loading.letter ? '...' : 'Dispute Letter'}
+                </Button>
+                <Button 
+                  variant="secondary" 
+                  size="sm" 
+                  onClick={() => handleGenerateLetter('ofs')} 
+                  disabled={loading.letter}
+                  className="text-[9px] px-1"
+                >
+                  {loading.letter ? '...' : 'OFS Letter'}
+                </Button>
+              </div>
+            </div>
+
             <div className="mt-auto pt-6 border-t border-slate-100">
               {isClient && (
                 <PDFDownloadLink
@@ -463,6 +563,28 @@ export default function ClaimLinApp() {
           );
         })}
       </nav>
+
+      {/* Letter Modal */}
+      {modalLetter && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl animate-scaleUp">
+            <div className="p-4 bg-purple-600 text-white font-black flex justify-between items-center text-sm">
+              <span>Generated Document</span>
+              <button onClick={() => setModalLetter(null)} className="hover:bg-purple-700 p-1 rounded-lg transition-colors">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[70vh]">
+              <pre className="text-xs font-mono whitespace-pre-wrap leading-relaxed text-slate-700 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                {modalLetter}
+              </pre>
+            </div>
+            <div className="p-4 border-t border-slate-100 flex justify-end">
+              <Button onClick={() => setModalLetter(null)}>Close</Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="hidden md:block"><Footer lang={lang} /></div>
     </div>
