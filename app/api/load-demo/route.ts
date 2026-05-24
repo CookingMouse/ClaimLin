@@ -10,6 +10,8 @@ import type {
   PolicyAnalysis,
 } from "@/types/index";
 
+export const runtime = "nodejs";
+
 type LoadDemoResponse = {
   claim: Claim;
   analysis: PolicyAnalysis;
